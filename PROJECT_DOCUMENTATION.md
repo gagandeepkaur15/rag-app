@@ -1,6 +1,7 @@
 # RAG Application - Complete Project Documentation
 
 ## Table of Contents
+
 1. [Project Overview](#project-overview)
 2. [Architecture](#architecture)
 3. [Spring AI Tree Retriever Package](#spring-ai-tree-retriever-package)
@@ -28,14 +29,16 @@ This project is a **Retrieval-Augmented Generation (RAG) Application** built wit
 
 ### Technology Stack
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Framework | Spring Boot | 3.3.5 |
-| Java Version | Java | 21 |
-| LLM Integration | Spring AI | 1.0.0 |
-| LLM Provider | Groq (OpenAI-compatible) | llama3-70b-8192 |
-| Custom Library | spring-ai-tree-retriever | 0.0.1-SNAPSHOT |
-| Build Tool | Maven | Latest |
+
+| Component       | Technology               | Version         |
+| --------------- | ------------------------ | --------------- |
+| Framework       | Spring Boot              | 3.3.5           |
+| Java Version    | Java                     | 21              |
+| LLM Integration | Spring AI                | 1.0.0           |
+| LLM Provider    | Groq (OpenAI-compatible) | llama3-70b-8192 |
+| Custom Library  | spring-ai-tree-retriever | 0.0.1-SNAPSHOT  |
+| Build Tool      | Maven                    | Latest          |
+
 
 ---
 
@@ -130,6 +133,7 @@ The **spring-ai-tree-retriever** package is a custom, specialized retrieval libr
 ### Why Tree-Based Retrieval?
 
 #### Traditional Vector Retrieval
+
 ```
 Query "What is RAG?"
     ↓
@@ -143,6 +147,7 @@ Problem: All documents treated equally, no hierarchical context
 ```
 
 #### Tree-Based Retrieval (This Package)
+
 ```
 Query "What is RAG?"
     ↓
@@ -161,7 +166,9 @@ Benefit: Respects document structure, efficient, context-aware
 ### Core Concepts
 
 #### 1. **Document Tree Structure**
+
 The tree-retriever organizes documents as a hierarchical tree where:
+
 - **Nodes** represent document chunks or sections
 - **Parent-Child relationships** represent hierarchical content organization
 - **Metadata** stores information like section titles, hierarchy level, original content
@@ -179,9 +186,11 @@ Root (Full Document)
 ```
 
 #### 2. **Traversal Algorithm**
+
 The `TraversalEngine` intelligently explores the tree:
 
 **Algorithm Steps:**
+
 1. Start at document root
 2. For each node, use LLM to score children based on query relevance
 3. Calculate a "branch factor" (how many branches to explore)
@@ -190,6 +199,7 @@ The `TraversalEngine` intelligently explores the tree:
 6. Return up to `maxResults` documents
 
 **Key Parameters:**
+
 - **branch-factor**: How many child branches to explore per node (default: 4)
 - **max-results**: Maximum documents to return (default: 3)
 - **traversal-deadline**: Maximum time for traversal operation (default: 3s)
@@ -197,7 +207,9 @@ The `TraversalEngine` intelligently explores the tree:
 - **llm-retries**: Number of retry attempts for LLM calls (default: 1)
 
 #### 3. **Intelligent Scoring**
+
 The LLM continuously scores nodes during traversal:
+
 ```
 Query: "How does tree RAG work?"
 
@@ -213,6 +225,7 @@ Result: Follow children 1, 2, and 4 (based on branch-factor)
 ### Package Components
 
 #### **TreeIndexBuilder**
+
 ```java
 Purpose: Constructs the tree index from raw documents
 Input: Raw document content + DocumentTreeNode list
@@ -225,6 +238,7 @@ Key Method: build(content, nodes)
 ```
 
 #### **TreeIndexStore**
+
 ```java
 Purpose: Persists and retrieves the built index
 Methods:
@@ -237,6 +251,7 @@ Production systems would persist to database/file system
 ```
 
 #### **TraversalEngine**
+
 ```java
 Purpose: Implements the core tree traversal algorithm
 Key Method: traverse(tree, query) -> List<Document>
@@ -252,6 +267,7 @@ Algorithm:
 ```
 
 #### **TreeDocumentRetriever**
+
 ```java
 Purpose: Adapts tree retrieval to Spring AI's DocumentRetriever interface
 Implements: org.springframework.ai.rag.retrieval.search.DocumentRetriever
@@ -263,6 +279,7 @@ Key Method: retrieve(Query) -> List<Document>
 ```
 
 #### **BaselinePipelines**
+
 ```java
 Purpose: Pre-processing pipeline for content parsing
 Key Methods:
@@ -277,6 +294,7 @@ What It Does:
 ```
 
 #### **SplitterConfig**
+
 ```java
 Configuration for document chunking:
   - chunkSize: Target size for each chunk (e.g., 800 chars)
@@ -293,12 +311,14 @@ Effect on chunking:
 ### Integration with Spring Boot
 
 The package provides **Spring Boot Auto-Configuration** that automatically:
+
 1. Detects classpath components from the tree-retriever library
 2. Creates bean instances for core components
 3. Registers configuration properties (prefixed with `spring.ai.tree-retriever.`)
 4. Wires dependencies automatically
 
 **Auto-Configuration provides:**
+
 - `TreeIndexStore` bean
 - `TraversalEngine` bean
 - `TreeRetrieverProperties` bean
@@ -313,6 +333,7 @@ The package provides **Spring Boot Auto-Configuration** that automatically:
 #### **Step 1: Indexing a Document**
 
 **API Call:**
+
 ```bash
 curl -X POST http://localhost:8081/api/index \
   -H "Content-Type: application/json" \
@@ -322,22 +343,19 @@ curl -X POST http://localhost:8081/api/index \
 **Processing Flow:**
 
 1. **Content Received**: Raw markdown text arrives at `IndexService.build()`
-
 2. **Parsing**: `BaselinePipelines.markdown()` parses markdown structure
-   ```
+  ```
    Input: "# Tree RAG\nTree RAG means... \n## How it works\n..."
    Output: ParsedChunk objects with hierarchy info
-   ```
-
+  ```
 3. **Chunking**: `SplitterConfig` splits large content into overlapping chunks
-   ```
+  ```
    Chunk 1: "Tree RAG - building an index..."  [metadata: heading="# Tree RAG"]
    Chunk 2: "...a document tree retrieves by traversal..." [overlap from Chunk 1]
    Chunk 3: "## How it works - The tree..."   [metadata: heading="## How it works"]
-   ```
-
+  ```
 4. **Tree Node Creation**: Each chunk becomes a `DocumentTreeNode`
-   ```java
+  ```java
    new DocumentTreeNode(
        UUID.randomUUID().toString(),           // Unique ID
        null,                                   // Parent (null for now)
@@ -345,15 +363,14 @@ curl -X POST http://localhost:8081/api/index \
        {"heading": "# Tree RAG", ...},         // Metadata
        List.of()                               // Children (empty initially)
    )
-   ```
-
+  ```
 5. **Tree Building**: `TreeIndexBuilder.build()` establishes relationships
-   ```
+  ```
    TreeIndexBuilder analyzes:
    - Document hierarchy from metadata
    - Section relationships
    - Semantic connections
-   
+
    Builds tree structure:
    Root
    ├── "# Tree RAG" (Node 1)
@@ -361,16 +378,16 @@ curl -X POST http://localhost:8081/api/index \
    │   └── "... by traversal..." (Chunk 1.2)
    └── "## How it works" (Node 2)
        └── "The tree..." (Chunk 2.1)
-   ```
-
+  ```
 6. **Storage**: `TreeIndexStore.publish()` saves the tree in memory
-   ```
+  ```
    Status: ✓ Index ready for queries
-   ```
+  ```
 
 #### **Step 2: Querying the Index**
 
 **API Call:**
+
 ```bash
 curl -X POST http://localhost:8081/api/ask \
   -H "Content-Type: application/json" \
@@ -380,57 +397,52 @@ curl -X POST http://localhost:8081/api/ask \
 **Processing Flow:**
 
 1. **Query Received**: Question arrives at `RagService.ask()`
-
 2. **Query Creation**: Wrapped in `Query` object
-   ```java
+  ```java
    new Query("How does the tree retriever work?")
-   ```
-
+  ```
 3. **Retriever Invoked**: `DocumentRetriever.retrieve(query)` called
-   - This delegates to `TreeDocumentRetriever`
-
+  - This delegates to `TreeDocumentRetriever`
 4. **Traversal Engine Activation**: `TraversalEngine.traverse(tree, query)` begins
-   ```
+  ```
    Step 1: Start at root node
-   
+
    Step 2: Score root's children for query relevance
            "How does the tree retriever work?"
-           
+
            Node 1: "# Tree RAG" 
                → LLM Score: 0.85 (mentions tree and retriever)
-           
+
            Node 2: "## How it works"
                → LLM Score: 0.92 (directly addresses "how it works")
-           
+
    Step 3: Sort by score (0.92, 0.85) and select top branch-factor (4)
            → Explore both children
-   
+
    Step 4: Traverse selected nodes recursively
            Under "## How it works":
                - Child: "The tree traversal algorithm..."
                    → LLM Score: 0.95 ✓ (Highly relevant!)
                - Child: "Configuration options..."
                    → LLM Score: 0.60 ✗ (Skip)
-           
-   Step 5: Continue until max-results (3) or tree exhausted
-   
-   Step 6: Collect results with highest scores:
-           1. "The tree traversal algorithm..." [Score: 0.95]
-           2. "## How it works" [Score: 0.92]
-           3. "# Tree RAG... tree retriever work" [Score: 0.85]
-   ```
 
+   Step 5: Continue until max-results (3) or tree exhausted
+
+   Step 6: Collect results with highest scores:
+  ```
+  1. "The tree traversal algorithm..." [Score: 0.95]
+  2. "## How it works" [Score: 0.92]
+  3. "# Tree RAG... tree retriever work" [Score: 0.85]
 5. **Result Collection**: Top relevant chunks returned as Documents
-   ```java
+  ```java
    List<Document> results = [
        Document("The tree traversal algorithm..."),
        Document("## How it works"),
        Document("# Tree RAG... tree retriever work")
    ]
-   ```
-
+  ```
 6. **Response Formatting**: Results converted to JSON
-   ```json
+  ```json
    [
        {
            "content": "The tree traversal algorithm...",
@@ -445,7 +457,7 @@ curl -X POST http://localhost:8081/api/ask \
            "metadata": {"heading": "Tree RAG"}
        }
    ]
-   ```
+  ```
 
 ---
 
@@ -458,6 +470,7 @@ curl -X POST http://localhost:8081/api/ask \
 **Responsibility:** HTTP endpoint management and request routing
 
 **Endpoints:**
+
 ```java
 @PostMapping("/index")
 // Accepts raw content, triggers indexing
@@ -481,6 +494,7 @@ Response: {"indexExists": true/false}
 **Responsibility:** Core RAG business logic
 
 **Key Functionality:**
+
 ```java
 public List<Document> ask(String question) {
     return retriever.retrieve(new Query(question));
@@ -488,12 +502,14 @@ public List<Document> ask(String question) {
 ```
 
 **How It Works:**
+
 1. Receives a question string
 2. Wraps it in a Spring AI `Query` object
 3. Delegates to injected `DocumentRetriever` (TreeDocumentRetriever)
 4. Returns list of relevant `Document` objects
 
 **Dependency Injection:**
+
 ```java
 private final DocumentRetriever retriever;
 
@@ -544,6 +560,7 @@ public boolean hasIndex() {
 ```
 
 **Workflow:**
+
 1. **Parse**: Process raw content using appropriate pipeline
 2. **Chunk**: Split into overlapping chunks
 3. **Nodify**: Convert chunks to tree nodes
@@ -557,6 +574,7 @@ public boolean hasIndex() {
 **Responsibility:** Configure LLM integration with Groq/OpenAI
 
 **Configuration:**
+
 ```java
 @Bean
 public ChatModel chatModel() {
@@ -577,6 +595,7 @@ public ChatModel chatModel() {
 ```
 
 **Purpose:**
+
 - Creates Spring AI `ChatModel` bean
 - Used by tree traversal engine for scoring
 - Enables LLM-based relevance evaluation
@@ -588,6 +607,7 @@ public ChatModel chatModel() {
 **Responsibility:** Wire tree retriever components into Spring context
 
 **Key Bean:**
+
 ```java
 @Bean
 public DocumentRetriever documentRetriever(
@@ -604,6 +624,7 @@ public DocumentRetriever documentRetriever(
 ```
 
 **Integration Points:**
+
 - `TreeIndexStore`: From tree-retriever auto-configuration
 - `TraversalEngine`: From tree-retriever auto-configuration
 - `TreeRetrieverProperties`: From tree-retriever auto-configuration
@@ -616,6 +637,7 @@ public DocumentRetriever documentRetriever(
 **Responsibility:** Application-level configuration beans
 
 **Currently Provides:**
+
 ```java
 @Bean
 public SummarizationEngine summarizationEngine() {
@@ -630,6 +652,7 @@ public SummarizationEngine summarizationEngine() {
 ```
 
 **Purpose:**
+
 - Provides `SummarizationEngine` bean
 - Used during tree building to create node summaries
 - Extensible for more sophisticated summarization
@@ -648,7 +671,7 @@ spring.application.name=rag-app
 server.port=8081
 
 # OpenAI/Groq Configuration
-spring.ai.openai.api-key=${GROQ_API_KEY}
+spring.ai.openai.api-key=api_key
 spring.ai.openai.base-url=https://api.groq.com/openai
 spring.ai.openai.model=llama3-70b-8192
 
@@ -664,49 +687,59 @@ spring.ai.tree-retriever.branch-factor=4
 
 #### **LLM Configuration**
 
-| Parameter | Value | Explanation |
-|-----------|-------|-------------|
-| `api-key` | `gsk_*` | Groq API key for authentication |
-| `base-url` | `https://api.groq.com/openai` | Groq uses OpenAI-compatible API |
-| `model` | `llama3-70b-8192` | Llama 3 model (context: 8192 tokens) |
+
+| Parameter  | Value                         | Explanation                          |
+| ---------- | ----------------------------- | ------------------------------------ |
+| `api-key`  | `gsk_`*                       | Groq API key for authentication      |
+| `base-url` | `https://api.groq.com/openai` | Groq uses OpenAI-compatible API      |
+| `model`    | `llama3-70b-8192`             | Llama 3 model (context: 8192 tokens) |
+
 
 #### **Tree Retriever Configuration**
 
-| Parameter | Value | Purpose |
-|-----------|-------|---------|
-| `max-results` | 3 | Maximum documents returned per query |
-| `traversal-deadline` | 3s | Total time budget for tree traversal |
-| `llm-timeout` | 2s | Maximum time per LLM scoring call |
-| `llm-retries` | 1 | Number of retries if LLM call fails |
-| `branch-factor` | 4 | Maximum children to explore per node |
+
+| Parameter            | Value | Purpose                              |
+| -------------------- | ----- | ------------------------------------ |
+| `max-results`        | 3     | Maximum documents returned per query |
+| `traversal-deadline` | 3s    | Total time budget for tree traversal |
+| `llm-timeout`        | 2s    | Maximum time per LLM scoring call    |
+| `llm-retries`        | 1     | Number of retries if LLM call fails  |
+| `branch-factor`      | 4     | Maximum children to explore per node |
+
 
 **Configuration Impact Examples:**
 
 **Scenario 1: Aggressive Search (More Results)**
+
 ```properties
 max-results=10
 branch-factor=6
 traversal-deadline=5s
 llm-timeout=3s
 ```
+
 Result: More comprehensive but slower searches
 
 **Scenario 2: Fast Search (Few Results)**
+
 ```properties
 max-results=1
 branch-factor=2
 traversal-deadline=1s
 llm-timeout=500ms
 ```
+
 Result: Quick response, limited results
 
 **Scenario 3: Balanced (Current)**
+
 ```properties
 max-results=3
 branch-factor=4
 traversal-deadline=3s
 llm-timeout=2s
 ```
+
 Result: Good balance between speed and quality
 
 ---
@@ -720,6 +753,7 @@ Result: Good balance between speed and quality
 **Purpose:** Build/rebuild the document index
 
 **Request:**
+
 ```json
 {
     "content": "# Your Document Title\n\nYour document content here...\n\n## Section\nMore content..."
@@ -727,6 +761,7 @@ Result: Good balance between speed and quality
 ```
 
 **Response:**
+
 ```json
 {
     "success": true,
@@ -735,6 +770,7 @@ Result: Good balance between speed and quality
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://localhost:8081/api/index \
   -H "Content-Type: application/json" \
@@ -742,12 +778,14 @@ curl -X POST http://localhost:8081/api/index \
 ```
 
 **What Happens:**
+
 1. Content is parsed and chunked
 2. Document tree is built
 3. Tree is stored in memory
 4. Previous index is replaced
 
 **Notes:**
+
 - Overwrites existing index
 - Synchronous operation
 - Returns immediately after tree building
@@ -761,6 +799,7 @@ curl -X POST http://localhost:8081/api/index \
 **Purpose:** Query the index with a question
 
 **Request:**
+
 ```json
 {
     "question": "How does the system work?"
@@ -768,6 +807,7 @@ curl -X POST http://localhost:8081/api/index \
 ```
 
 **Response:**
+
 ```json
 [
     {
@@ -790,6 +830,7 @@ curl -X POST http://localhost:8081/api/index \
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://localhost:8081/api/ask \
   -H "Content-Type: application/json" \
@@ -797,6 +838,7 @@ curl -X POST http://localhost:8081/api/ask \
 ```
 
 **Response Processing:**
+
 ```
 Question: "What is RAG?"
     ↓
@@ -808,6 +850,7 @@ Return as array of documents with metadata
 ```
 
 **Notes:**
+
 - Returns up to `max-results` documents
 - Documents are sorted by relevance (highest first)
 - Empty array if no relevant documents found
@@ -822,6 +865,7 @@ Return as array of documents with metadata
 **Purpose:** Check if index exists
 
 **Response:**
+
 ```json
 {
     "indexExists": true
@@ -837,11 +881,13 @@ or
 ```
 
 **Example:**
+
 ```bash
 curl http://localhost:8081/api/status
 ```
 
 **Use Case:**
+
 - Before querying, verify index exists
 - Skip querying if `indexExists` is false
 - Returns immediately (no processing)
@@ -854,27 +900,32 @@ curl http://localhost:8081/api/status
 
 - Java 21 or higher
 - Maven 3.6+
-- Groq API Key (free at https://console.groq.com)
+- Groq API Key (free at [https://console.groq.com](https://console.groq.com))
 
 ### Setup Instructions
 
 #### **1. Clone and Navigate**
+
 ```bash
 cd /Users/gagandeepkaur/Documents/rag_app
 ```
 
 #### **2. Configure API Key**
+
 Edit `src/main/resources/application.properties`:
+
 ```properties
 spring.ai.openai.api-key=YOUR_GROQ_API_KEY_HERE
 ```
 
 #### **3. Build the Project**
+
 ```bash
 ./mvnw clean install
 ```
 
 #### **4. Run the Application**
+
 ```bash
 ./mvnw spring-boot:run
 ```
@@ -882,6 +933,7 @@ spring.ai.openai.api-key=YOUR_GROQ_API_KEY_HERE
 Application starts on `http://localhost:8081`
 
 #### **5. Verify It's Running**
+
 ```bash
 curl http://localhost:8081/api/status
 # Should return: {"indexExists": false}
@@ -890,6 +942,7 @@ curl http://localhost:8081/api/status
 ### First-Time Usage
 
 #### **Step 1: Create an Index**
+
 ```bash
 curl -X POST http://localhost:8081/api/index \
   -H "Content-Type: application/json" \
@@ -899,21 +952,25 @@ curl -X POST http://localhost:8081/api/index \
 ```
 
 Expected response:
+
 ```json
 {"success": true, "message": "Index built"}
 ```
 
 #### **Step 2: Check Index Status**
+
 ```bash
 curl http://localhost:8081/api/status
 ```
 
 Expected response:
+
 ```json
 {"indexExists": true}
 ```
 
 #### **Step 3: Ask a Question**
+
 ```bash
 curl -X POST http://localhost:8081/api/ask \
   -H "Content-Type: application/json" \
@@ -921,6 +978,7 @@ curl -X POST http://localhost:8081/api/ask \
 ```
 
 Expected response:
+
 ```json
 [
   {
@@ -942,30 +1000,28 @@ Expected response:
 The tree-retriever analyzes document structure to build relationships:
 
 1. **Markdown Headers**: Used as primary organizational signal
-   ```markdown
+  ```markdown
    # Level 1 (Root section)
    ## Level 2 (Subsection)
    ### Level 3 (Sub-subsection)
-   ```
-
+  ```
 2. **Parent-Child Relationships**: Based on header hierarchy
-   ```
+  ```
    # Introduction
    ├── Content paragraph 1
    ├── Content paragraph 2
    └── ## Subsection
        └── Subsection content
-   ```
-
+  ```
 3. **Metadata Preservation**: Each node retains context
-   ```json
+  ```json
    {
        "heading": "## How Tree Works",
        "level": 2,
        "chunk": 0,
        "position": "middle"
    }
-   ```
+  ```
 
 #### **Chunking Strategy**
 
@@ -985,6 +1041,7 @@ Chunk 3: Characters [1400-2200] "... sentence Y-1. ... sentence Z."
 ```
 
 **Overlap Purpose:**
+
 - Maintains context continuity
 - Prevents important information from being split at boundaries
 - Helps LLM understand context better
@@ -1047,24 +1104,21 @@ Scenario 2: Overall Traversal Takes Too Long
 ### Performance Optimization Tips
 
 1. **Adjust branch-factor based on tree size:**
-   - Small documents (< 10KB): `branch-factor=2-3`
-   - Medium documents (10-100KB): `branch-factor=4-5`
-   - Large documents (> 100KB): `branch-factor=6-8`
-
+  - Small documents (< 10KB): `branch-factor=2-3`
+  - Medium documents (10-100KB): `branch-factor=4-5`
+  - Large documents (> 100KB): `branch-factor=6-8`
 2. **Tune chunk size for your domain:**
-   - Code examples: smaller chunks (400-600 chars)
-   - Technical docs: medium chunks (800-1200 chars)
-   - Long-form content: larger chunks (1200-2000 chars)
-
+  - Code examples: smaller chunks (400-600 chars)
+  - Technical docs: medium chunks (800-1200 chars)
+  - Long-form content: larger chunks (1200-2000 chars)
 3. **Adjust max-results based on use case:**
-   - Real-time chat: `max-results=1-2` (fast)
-   - Research: `max-results=5-10` (comprehensive)
-   - Summarization: `max-results=10+` (full context)
-
+  - Real-time chat: `max-results=1-2` (fast)
+  - Research: `max-results=5-10` (comprehensive)
+  - Summarization: `max-results=10+` (full context)
 4. **Use appropriate traversal-deadline:**
-   - Chat interfaces: `500ms-1s` (snappy response)
-   - Batch processing: `5-10s` (thorough search)
-   - Complex queries: `3-5s` (balanced)
+  - Chat interfaces: `500ms-1s` (snappy response)
+  - Batch processing: `5-10s` (thorough search)
+  - Complex queries: `3-5s` (balanced)
 
 ### Integration with External Systems
 
@@ -1142,6 +1196,7 @@ logger.info("Retrieved {} documents in {}ms",
 ### Common Issues
 
 #### **Issue: "IndexExists: false" when trying to query**
+
 ```
 Solution: 
 1. Call POST /api/index with document content first
@@ -1150,6 +1205,7 @@ Solution:
 ```
 
 #### **Issue: LLM API key errors**
+
 ```
 Solution:
 1. Verify API key in application.properties
@@ -1158,6 +1214,7 @@ Solution:
 ```
 
 #### **Issue: Slow retrieval performance**
+
 ```
 Solution:
 1. Reduce branch-factor if index is large
@@ -1167,6 +1224,7 @@ Solution:
 ```
 
 #### **Issue: Getting irrelevant results**
+
 ```
 Solution:
 1. Ensure document content is well-structured (use headers)
@@ -1192,10 +1250,10 @@ The spring-ai-tree-retriever package provides the core innovation: instead of tr
 
 ## Additional Resources
 
-- **Spring AI Documentation**: https://docs.spring.io/spring-ai/
-- **Groq API Docs**: https://console.groq.com/docs
-- **Spring Boot Reference**: https://spring.io/projects/spring-boot
-- **RAG Best Practices**: https://www.langchain.com/
+- **Spring AI Documentation**: [https://docs.spring.io/spring-ai/](https://docs.spring.io/spring-ai/)
+- **Groq API Docs**: [https://console.groq.com/docs](https://console.groq.com/docs)
+- **Spring Boot Reference**: [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
+- **RAG Best Practices**: [https://www.langchain.com/](https://www.langchain.com/)
 
 ---
 
